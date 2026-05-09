@@ -6,6 +6,7 @@ using sentence-transformers/all-MiniLM-L6-v2 and computes
 cosine similarity as a relevance score.
 """
 
+import torch
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from functools import lru_cache
@@ -16,11 +17,13 @@ class SemanticScorer:
     Lightweight semantic similarity scorer.
 
     Usage:
-        scorer = SemanticScorer(device='cpu')
+        scorer = SemanticScorer()
         score = scorer.score("entity -> relation -> entity", "question text")
     """
 
-    def __init__(self, model_name="all-MiniLM-L6-v2", device="cpu"):
+    def __init__(self, model_name="all-MiniLM-L6-v2", device=None):
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = SentenceTransformer(model_name, device=device)
         self.device = device
 

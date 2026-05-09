@@ -16,7 +16,7 @@ from typing import List, Tuple, Optional
 import numpy as np
 from gcr.src.trie import MarisaTrie
 from gcr.src.utils.graph_utils import build_graph, dfs
-from gcr.src.utils import path_to_string
+import gcr.src.utils as _gcr_utils
 from dca_trie.semantic_scorer import SemanticScorer
 
 
@@ -68,7 +68,7 @@ class V1TrieBuilder:
         # Step 3: Score and filter
         filtered_strs = []
         for p in all_paths:
-            path_str = path_to_string(p)
+            path_str = _gcr_utils.path_to_string(p)
             score = self.scorer.score_path(path_str, query_emb)
             if score >= self.tau:
                 filtered_strs.append(path_str)
@@ -98,7 +98,7 @@ class V1TrieBuilder:
         scores = []
         filtered_strs = []
         for p in all_paths:
-            path_str = path_to_string(p)
+            path_str = _gcr_utils.path_to_string(p)
             score = self.scorer.score_path(path_str, query_emb)
             scores.append((path_str, float(score)))
             if score >= self.tau:
@@ -136,7 +136,7 @@ class V1TrieBuilder:
 
         filtered = []
         for p in all_paths:
-            path_str = path_to_string(p)
+            path_str = _gcr_utils.path_to_string(p)
             score = self.scorer.score_path(path_str, query_emb)
             if score >= self.tau:
                 filtered.append(path_str)

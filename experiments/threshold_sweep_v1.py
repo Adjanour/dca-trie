@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dca_trie.semantic_scorer import SemanticScorer
 from dca_trie.sir_measurement import SIRMeasurer
 from dca_trie.mid_resolver import MidResolver
+from dca_trie.v1_trie_builder import V1TrieBuilder
 from gcr.src.utils.graph_utils import build_graph, dfs, get_truth_paths
 
 
@@ -231,11 +232,10 @@ def main():
     tau_values = [round(t, 2) for t in tau_values]
 
     print(f"Loading SemanticScorer (MiniLM)...")
-    scorer = SemanticScorer(device="cpu")
+    scorer = SemanticScorer()
 
     if args.dataset == "test":
         print(f"Using local test data ({len(_get_test_questions())} questions)")
-        from dca_trie.v1_trie_builder import V1TrieBuilder
 
         questions = _get_test_questions()
         tokenizer = None
@@ -273,9 +273,6 @@ def main():
             return resolver.resolve_path(raw)
 
         gcr_utils.path_to_string = _resolved_path_to_string
-
-        # Now import V1TrieBuilder — it will use the patched path_to_string
-        from dca_trie.v1_trie_builder import V1TrieBuilder
 
         tokenizer = AutoTokenizer.from_pretrained(
             "rmanluo/GCR-Meta-Llama-3.1-8B-Instruct",
