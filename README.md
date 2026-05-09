@@ -11,7 +11,7 @@ DCA-Trie extends [Graph-Constrained Reasoning (GCR)](https://github.com/rmanluo/
 ### Repository Structure
 
 ```bash
-vendor/gcr/              #   SUBMODULE: exact original GCR (RManLuo/graph-constrained-reasoning)
+vendor/gcr/              #   SUBMODULE: exact original GCR (RManLuo/Graph-constrained-Reasoning)
   git submodule update --init  # clone the original
 
 gcr/                     #   VENDORED: GCR with import path changes (src. -> gcr.src.)

@@ -10,7 +10,7 @@ authors = [
 ]
 readme = "README.md"
 
-# Vendored packages: gcr/src/ is GCR's code (untouched, from RManLuo/graph-constrained-reasoning),
+# Vendored: gcr/ is GCR's code (from RManLuo/Graph-constrained-Reasoning, original at vendor/gcr/),
 # dca_trie/ is DCA-Trie contribution code
 packages = [{ include = "gcr" }, { include = "dca_trie" }]
 

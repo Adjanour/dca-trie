@@ -29,7 +29,7 @@ from KGQA, constrained decoding, and semantic parsing literatures.
 | **SmartVector** (2026) | https://arxiv.org/abs/2604.20598 |
 | **When Vector Search Fails** (Pan, 2026) | https://tianpan.co/blog/2026-04-20-knowledge-graphs-vs-vector-search-retrieval |
 | **RouterKGQA code** | https://github.com/Oldcircle/RouterKGQA |
-| **DCA-Trie project** | `/home/bernard/research/projects/graph-constrained-reasoning` |
+| **DCA-Trie project** | `/home/bernard/research/projects/dca-trie` |
 
 ---
 

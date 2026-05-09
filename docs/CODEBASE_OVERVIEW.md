@@ -6,8 +6,8 @@
 ## Directory Structure
 
 ```bash
-graph-constrained-reasoning/
-├── 📦 gcr/                        # BASELINE: GCR (RManLuo/graph-constrained-reasoning)
+dca-trie/
+├── 📦 gcr/                        # BASELINE: GCR (RManLuo/Graph-constrained-Reasoning)
 │   ├── src/                       #   Core GCR library
 │   │   ├── trie.py                #     Trie data structures
 │   │   ├── graph_constrained_decoding.py  # Logit masking

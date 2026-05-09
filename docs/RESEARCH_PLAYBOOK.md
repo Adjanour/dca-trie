@@ -57,7 +57,7 @@ poetry --version  # Should show 1.8.x or 2.x
 ### 1.4 Configure Poetry for This Project
 
 ```bash
-cd /path/to/graph-constrained-reasoning
+cd /path/to/dca-trie
 
 # Tell Poetry to use Python 3.10 specifically:
 poetry env use python3.10
@@ -135,7 +135,7 @@ cp .env.example .env
 ### 1.9 Verify the Project Code Loads
 
 ```bash
-cd /path/to/graph-constrained-reasoning
+cd /path/to/dca-trie
 
 poetry shell
 
@@ -159,7 +159,7 @@ python -c "from gcr.src.utils.graph_utils import build_graph, dfs, get_truth_pat
 | `pip install` fails with "externally managed environment" | PEP 668 | Don't use `pip install`. Use `poetry add <package>` or activate the shell first |
 | `poetry install` fails on `bitsandbytes` | Missing CUDA | `poetry install` still works (installs CPU fallback). If it truly fails, remove bitsandbytes from pyproject.toml temporarily |
 | `marisa-trie` fails to build | Missing libtool | `sudo apt install build-essential libtool` |
-| `ModuleNotFoundError: gcr` | Wrong working dir | Always run from the repo root, or `cd /path/to/graph-constrained-reasoning` |
+| `ModuleNotFoundError: gcr` | Wrong working dir | Always run from the repo root, or `cd /path/to/dca-trie` |
 | `ModuleNotFoundError: dca_trie` | Not installed | Run `poetry install` from repo root |
 | CUDA not available | No NVIDIA GPU | That's expected on your local machine. Use Colab for GPU phases. The CPU-only code (Phases 1-2, MID resolver) works fine locally |
 | DeepSpeed import error | CUDA version mismatch | DeepSpeed only needed for GCR inference on GPU. Comment out deepspeed from pyproject.toml for CPU-only work |
@@ -174,8 +174,8 @@ When you need GPU (Phases 0, 3, 4), use Google Colab:
 
 ```python
 # Clone the repo
-!git clone https://github.com/YOUR_GITHUB/graph-constrained-reasoning.git
-%cd graph-constrained-reasoning
+!git clone https://github.com/YOUR_GITHUB/dca-trie.git
+%cd dca-trie
 
 # Install Poetry
 !curl -sSL https://install.python-poetry.org | python3 -
@@ -1431,8 +1431,8 @@ And the question mentions "Warsaw", you can infer `m.0k8nh0b` = "Warsaw".
 
 ```bash
 # === SETUP ===
-git clone https://github.com/YOUR_USERNAME/graph-constrained-reasoning.git
-cd graph-constrained-reasoning
+git clone https://github.com/YOUR_USERNAME/dca-trie.git
+cd dca-trie
 cp .env.example .env
 # Edit .env with your tokens
 poetry env use python3.10
