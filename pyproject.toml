@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "dca-trie"
+version = "0.1.0"
+description = "Dynamic Context-Aware Trie for Knowledge Graph-Constrained LLM Generation"
+authors = [
+    "Bernard Kirk Adjanor Katamanso",
+    "Erica Amonor",
+    "Joseph Osei Nyarko",
+    "Jessica Afua Etornam Nsafoah",
+]
+readme = "README.md"
+
+# Vendored packages: gcr/src/ is GCR's code (untouched, from RManLuo/graph-constrained-reasoning),
+# dca_trie/ is DCA-Trie contribution code
+packages = [{ include = "gcr" }, { include = "dca_trie" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+# GCR's dependencies (kept as-is for reproducibility)
+transformers = "4.44"
+accelerate = "^0.30.1"
+peft = "^0.11.1"
+deepspeed = "^0.14.2"
+tiktoken = "^0.7.0"
+openai = "^1.31.1"
+datasets = "^2.19.2"
+python-dotenv = "^1.0.1"
+marisa-trie = "^1.2.0"
+scikit-learn = "^1.5.0"
+bitsandbytes = "^0.43.1"
+trl = "^0.9.4"
+sentencepiece = "^0.2.0"
+protobuf = "^5.27.1"
+wandb = "^0.17.1"
+
+# DCA-Trie additional dependencies
+sentence-transformers = "^5.4.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

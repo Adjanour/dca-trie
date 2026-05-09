@@ -1,0 +1,21 @@
+*.pyc
+__pycache__/
+.vscode/
+logs
+tmp/
+.env
+save_models
+wandb/
+.ruff_cache/
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Generated data and results
+/data
+/results/
+
+# Only ignore root-level script/ (gcr/scripts/ is tracked)
+/script/

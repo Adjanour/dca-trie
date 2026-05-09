@@ -1,0 +1,3 @@
+[submodule "vendor/gcr"]
+	path = vendor/gcr
+	url = https://github.com/RManLuo/graph-constrained-reasoning.git
