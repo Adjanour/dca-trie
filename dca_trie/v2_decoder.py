@@ -213,6 +213,30 @@ class V2Decoder:
             for seq in new_paths:
                 state.trie.add(seq)
 
+    def _check_constrained_flag(self, sent: torch.Tensor,
+                                 start_token_ids: List[int],
+                                 end_token_ids: List[int]):
+        """
+        Standalone check for constrained region boundaries.
+
+        Replicates GCR's GraphConstrainedDecoding.check_constrained_flag
+        without depending on the class instance.
+
+        Returns (is_constrained, L_input) where L_input is the position
+        of the last start token.
+        """
+        start_token = start_token_ids[0] if len(start_token_ids) == 1 else start_token_ids
+        end_token = end_token_ids[0] if len(end_token_ids) == 1 else end_token_ids
+
+        matched_start = torch.where(sent == start_token)[0]
+        if len(matched_start) == 0:
+            return False, len(sent)
+        last_start = matched_start[-1]
+        num_end = len(torch.where(sent[last_start:] == end_token)[0])
+        if num_end == 0:
+            return True, int(last_start)
+        return False, len(sent)
+
     @torch.inference_mode()
     def generate(self, input_query: str, initial_trie: Trie,
                   question_dict, start_token_ids, end_token_ids,
@@ -228,15 +252,14 @@ class V2Decoder:
             start_token_ids: Token IDs for the constrained region start.
             end_token_ids: Token IDs for the constrained region end.
             constrained_flag_fn: Callable returning (is_constrained, L_input).
-                                Defaults to GCR's ``check_constrained_flag``.
+                                Defaults to internal ``_check_constrained_flag``.
             **gen_kwargs: Passed to ``model.generate()`` (e.g., num_beams).
 
         Returns:
             List of decoded output strings.
         """
         if constrained_flag_fn is None:
-            from gcr.src.graph_constrained_decoding import check_constrained_flag
-            constrained_flag_fn = check_constrained_flag
+            constrained_flag_fn = self._check_constrained_flag
 
         graph = build_graph(question_dict["graph"])
 
