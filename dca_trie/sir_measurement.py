@@ -113,7 +113,8 @@ class SIRMeasurer:
             else:
                 path_str = str(token_seq)
 
-            num_hops = path_str.count(" -> ")
+            num_arrows = path_str.count(" -> ")
+            num_hops = num_arrows // 2
             if num_hops in hop_depths:
                 hop_paths[num_hops].append(path_str)
 
