@@ -10,6 +10,7 @@ Where:
 
 SIR = 0: all admitted paths are relevant
 SIR = 1: no admitted path is relevant
+SIR = None: no paths to measure (empty trie)
 """
 
 import numpy as np
@@ -19,7 +20,7 @@ from dca_trie.semantic_scorer import SemanticScorer
 
 class SIRMeasurer:
     """
-    Measures oracle permissiveness via SIR.
+    Measures oracle permissiveness via SIR with batch-encoding support.
 
     Usage:
         scorer = SemanticScorer()
@@ -31,72 +32,81 @@ class SIRMeasurer:
         self.scorer = scorer
         self.tokenizer = tokenizer
 
-    def measure_from_trie(self, trie, question: str, partial_gen: str = ""):
+    def _resolve_paths(self, trie):
+        """Convert trie/token sequences to path strings."""
+        paths = []
+        for token_seq in trie:
+            if isinstance(token_seq, (list, tuple)) and self.tokenizer:
+                path_str = self.tokenizer.decode(token_seq, skip_special_tokens=True)
+            else:
+                path_str = str(token_seq)
+            paths.append(path_str)
+        return paths
+
+    def measure_from_trie(self, trie, question: str, partial_gen: str = "",
+                          batch_size=64):
         """
-        Compute SIR by iterating all paths in a trie.
+        Compute SIR using batch encoding for speed.
 
         Args:
             trie: Iterable of paths (strings or token sequences)
             question: Input question
             partial_gen: Partial generation context
+            batch_size: Batch size for SentenceTransformer encoding
 
         Returns:
             dict with sir, max_similarity, avg_similarity, num_paths
+            sir is None if the trie is empty
         """
-        query_emb = self.scorer.encode_query(question, partial_gen)
-
-        max_sim = -1.0
-        total_sim = 0.0
-        num_paths = 0
-
-        for token_seq in trie:
-            num_paths += 1
-            if isinstance(token_seq, (list, tuple)) and self.tokenizer:
-                path_str = self.tokenizer.decode(token_seq, skip_special_tokens=True)
-            else:
-                path_str = str(token_seq)
-
-            path_emb = self.scorer.encode_path(path_str)
-            sim = float(
-                np.dot(path_emb, query_emb)
-                / (np.linalg.norm(path_emb) * np.linalg.norm(query_emb))
-            )
-            max_sim = max(max_sim, sim)
-            total_sim += sim
+        path_strs = self._resolve_paths(trie)
+        num_paths = len(path_strs)
 
         if num_paths == 0:
             return {
-                "sir": 0.0,
-                "max_similarity": 0.0,
-                "avg_similarity": 0.0,
+                "sir": None,
+                "max_similarity": None,
+                "avg_similarity": None,
                 "num_paths": 0,
             }
 
+        query_emb = self.scorer.encode_query(question, partial_gen)
+        path_embs = self.scorer.encode_paths_batch(path_strs, batch_size=batch_size)
+        query_norm = np.linalg.norm(query_emb)
+
+        similarities = np.dot(path_embs, query_emb) / (
+            np.linalg.norm(path_embs, axis=1) * query_norm
+        )
+
         return {
-            "sir": 1.0 - max_sim,
-            "max_similarity": max_sim,
-            "avg_similarity": total_sim / num_paths,
+            "sir": 1.0 - float(np.max(similarities)),
+            "max_similarity": float(np.max(similarities)),
+            "avg_similarity": float(np.mean(similarities)),
             "num_paths": num_paths,
         }
 
-    def measure_per_hop(self, trie, question: str, hop_depths=None):
+    def measure_per_hop(self, trie, question: str, partial_gen: str = "",
+                        hop_depths=None, batch_size=64):
         """
-        Measure SIR stratified by hop depth.
+        Measure SIR stratified by hop depth using batch encoding.
 
         Args:
             trie: Iterable of paths
             question: Input question
+            partial_gen: Partial generation context
             hop_depths: Depths to analyze (default [1, 2, 3, 4])
+            batch_size: Batch size for SentenceTransformer encoding
 
         Returns:
             dict mapping hop_depth -> SIR stats
         """
         if hop_depths is None:
             hop_depths = [1, 2, 3, 4]
+        hop_depths = set(hop_depths)
 
-        query_emb = self.scorer.encode_query(question)
+        query_emb = self.scorer.encode_query(question, partial_gen)
+
+        # Collect all path strings with their hop depths
         hop_paths = defaultdict(list)
-
         for token_seq in trie:
             if isinstance(token_seq, (list, tuple)) and self.tokenizer:
                 path_str = self.tokenizer.decode(token_seq, skip_special_tokens=True)
@@ -107,32 +117,43 @@ class SIRMeasurer:
             if num_hops in hop_depths:
                 hop_paths[num_hops].append(path_str)
 
+        # Batch-encode all paths at once (more efficient than per-hop batches)
+        all_paths = []
+        hop_indices = {}  # hop -> (start, end) into all_paths
+        for hop in sorted(hop_paths.keys()):
+            hop_indices[hop] = (len(all_paths), len(all_paths) + len(hop_paths[hop]))
+            all_paths.extend(hop_paths[hop])
+
+        if not all_paths:
+            return {h: {"sir": None, "num_paths": 0, "max_similarity": None,
+                        "avg_similarity": None} for h in hop_depths}
+
+        path_embs = self.scorer.encode_paths_batch(all_paths, batch_size=batch_size)
+        query_norm = np.linalg.norm(query_emb)
+
         results = {}
         for hop in hop_depths:
             paths = hop_paths.get(hop, [])
             if not paths:
                 results[hop] = {
-                    "sir": 0.0,
+                    "sir": None,
                     "num_paths": 0,
-                    "max_similarity": 0.0,
-                    "avg_similarity": 0.0,
+                    "max_similarity": None,
+                    "avg_similarity": None,
                 }
                 continue
 
-            similarities = []
-            for p in paths:
-                path_emb = self.scorer.encode_path(p)
-                sim = float(
-                    np.dot(path_emb, query_emb)
-                    / (np.linalg.norm(path_emb) * np.linalg.norm(query_emb))
-                )
-                similarities.append(sim)
+            start, end = hop_indices[hop]
+            hop_embs = path_embs[start:end]
+            similarities = np.dot(hop_embs, query_emb) / (
+                np.linalg.norm(hop_embs, axis=1) * query_norm
+            )
 
             results[hop] = {
-                "sir": 1.0 - max(similarities),
+                "sir": 1.0 - float(np.max(similarities)),
                 "num_paths": len(paths),
-                "max_similarity": max(similarities),
-                "avg_similarity": sum(similarities) / len(similarities),
+                "max_similarity": float(np.max(similarities)),
+                "avg_similarity": float(np.mean(similarities)),
             }
 
         return results

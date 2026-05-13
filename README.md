@@ -22,14 +22,17 @@ gcr/                     #   VENDORED: GCR with import path changes (src. -> gcr
 └── resources/           #   Figures from the GCR paper
 
 dca_trie/                #   CONTRIBUTION: DCA-Trie implementation
-├── semantic_scorer.py   #   MiniLM encoder + cosine scoring
-├── sir_measurement.py   #   Semantic Irrelevance Ratio metric
+├── semantic_scorer.py   #   MiniLM encoder + cosine scoring (batch, auto-GPU)
+├── sir_measurement.py   #   Semantic Irrelevance Ratio metric (batch-encoded)
+├── mid_resolver.py      #   Freebase MID-to-name resolver (+ FB names download)
 ├── v1_trie_builder.py   #   Static semantic filtering at trie construction
-├── mid_resolver.py      #   Freebase MID-to-name resolver
+├── v1_gcr_integration.py#   Drop-in V1TrieBuilder for GCR's pipeline
+├── v2_decoder.py        #   Step-wise dynamic expansion during beam search
 └── test_mini_freebase.py#   Test data for local development
 
 experiments/             # DCA-Trie experiment scripts
 ├── threshold_sweep_v1.py
+└── test_v2_decoder.py
 
 docs/                    # Documentation
 ├── RESEARCH_PLAYBOOK.md
@@ -59,10 +62,10 @@ docs/                    # Documentation
 poetry install
 
 # Run threshold sweep on test data
-poetry run python experiments/threshold_sweep_v1.py --data test
+poetry run python experiments/threshold_sweep_v1.py --dataset test
 
 # Run on WebQSP (requires HF token + GPU)
-poetry run python experiments/threshold_sweep_v1.py --data webqsp
+poetry run python experiments/threshold_sweep_v1.py --dataset webqsp
 ```
 
 ## References

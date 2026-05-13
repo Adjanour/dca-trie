@@ -2,21 +2,21 @@
 DCA-Trie v1: Static Semantic Filtering at Trie Construction Time.
 
 Wraps GCR's DFS-based path enumeration with semantic relevance scoring.
-Only paths above threshold τ are admitted into the KG-Trie.
+Only paths above threshold tau are admitted into the KG-Trie.
 
 Key difference from GCR:
   GCR:     trie = MarisaTrie(tokenize(dfs(graph, q_entity, max_len)))
   DCA-Trie v1:  trie = MarisaTrie(tokenize(filter_score(dfs(graph, q_entity, max_len), question)))
 
-Integration point: Replaces GraphConstrainedPromptBuilder.get_graph_index()
-in the Step 1 (predict_paths_and_answers.py) pipeline.
+Integration: Can be used standalone or patched into GCR's pipeline
+via v1_gcr_integration.patch_prompt_builder().
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Optional, Callable
 import numpy as np
 from gcr.src.trie import MarisaTrie
 from gcr.src.utils.graph_utils import build_graph, dfs
-import gcr.src.utils as _gcr_utils
+from gcr.src.utils import path_to_string as _default_path_to_str
 from dca_trie.semantic_scorer import SemanticScorer
 
 
@@ -30,6 +30,9 @@ class V1TrieBuilder:
 
     The resulting trie contains only paths whose semantic similarity
     to the question is >= tau.
+
+    For MID resolution, pass path_to_str_fn=resolver.resolve_path
+    (wraps path_to_string with MID-to-readable-name conversion).
     """
 
     def __init__(
@@ -39,36 +42,25 @@ class V1TrieBuilder:
         tau: float = 0.3,
         index_path_length: int = 2,
         undirected: bool = False,
+        path_to_str_fn: Optional[Callable] = None,
     ):
         self.tokenizer = tokenizer
         self.scorer = scorer
         self.tau = tau
         self.index_path_length = index_path_length
         self.undirected = undirected
+        self._path_to_str = path_to_str_fn or _default_path_to_str
 
     def build_filtered_trie(self, question_dict):
-        """
-        Main entry point: build a MarisaTrie with only semantically relevant paths.
-
-        Args:
-            question_dict: dict with keys 'question', 'q_entity', 'graph'.
-                           Compatible with HuggingFace WebQSP/CWQ format.
-
-        Returns:
-            MarisaTrie containing only filtered paths, or None if no paths remain.
-        """
-        # Step 1: Get all structural paths (same as GCR)
         all_paths = self._enumerate_paths(question_dict)
         if not all_paths:
             return None
 
-        # Step 2: Encode question once
         query_emb = self.scorer.encode_query(question_dict["question"])
 
-        # Step 3: Score and filter
         filtered_strs = []
         for p in all_paths:
-            path_str = _gcr_utils.path_to_string(p)
+            path_str = self._path_to_str(p)
             score = self.scorer.score_path(path_str, query_emb)
             if score >= self.tau:
                 filtered_strs.append(path_str)
@@ -76,7 +68,6 @@ class V1TrieBuilder:
         if not filtered_strs:
             return None
 
-        # Step 4: Tokenize and build trie
         tokenized = self.tokenizer(
             filtered_strs, padding=False, add_special_tokens=False
         ).input_ids
@@ -85,10 +76,6 @@ class V1TrieBuilder:
         return MarisaTrie(tokenized, max_token_id=len(self.tokenizer) + 1)
 
     def build_filtered_trie_with_scores(self, question_dict):
-        """
-        Like build_filtered_trie, but returns (trie, scores) for analysis.
-        scores is a list of (path_str, score) for all paths (both kept and pruned).
-        """
         all_paths = self._enumerate_paths(question_dict)
         if not all_paths:
             return None, []
@@ -98,7 +85,7 @@ class V1TrieBuilder:
         scores = []
         filtered_strs = []
         for p in all_paths:
-            path_str = _gcr_utils.path_to_string(p)
+            path_str = self._path_to_str(p)
             score = self.scorer.score_path(path_str, query_emb)
             scores.append((path_str, float(score)))
             if score >= self.tau:
@@ -116,7 +103,6 @@ class V1TrieBuilder:
         return trie, scores
 
     def _enumerate_paths(self, question_dict):
-        """Same path enumeration as GCR's get_graph_index()."""
         if "paths" in question_dict:
             return question_dict["paths"]
 
@@ -124,10 +110,7 @@ class V1TrieBuilder:
         return dfs(g, question_dict["q_entity"], self.index_path_length)
 
     def filter_paths_only(self, question_dict):
-        """
-        Return filtered path strings without building a trie.
-        Useful for threshold sweep FNR computation.
-        """
+        """Return filtered path strings without building a trie."""
         all_paths = self._enumerate_paths(question_dict)
         if not all_paths:
             return []
@@ -136,7 +119,7 @@ class V1TrieBuilder:
 
         filtered = []
         for p in all_paths:
-            path_str = _gcr_utils.path_to_string(p)
+            path_str = self._path_to_str(p)
             score = self.scorer.score_path(path_str, query_emb)
             if score >= self.tau:
                 filtered.append(path_str)

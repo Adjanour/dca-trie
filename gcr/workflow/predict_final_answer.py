@@ -50,7 +50,7 @@ def make_prediction(data, args, processed_list, input_builder, model):
         }
     input = input_builder.process_input(data)
     input = model.prepare_model_prompt(input)
-    if "gcr" in args.model_name:
+    if "gcr" in args.model_name.lower():
         entity_list = set()
         predicted_paths = data["predicted_paths"]
         for p in predicted_paths:
@@ -222,7 +222,7 @@ def main(args, LLM):
         prediction_suffix = "no-path"
     if args.use_rog_prompt:
         prediction_suffix += "_rog_prompt"
-    if "gcr" in args.model_name:
+    if "gcr" in args.model_name.lower():
         prediction_suffix += f"_k_{args.k}_gen_{args.generation_mode}"
     prediction_suffix = args.prefix + prediction_suffix
 
