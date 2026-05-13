@@ -268,9 +268,13 @@ class V2Decoder:
             k=self.k,
         )
 
+        # Support both raw HF models and GCR wrappers (e.g. HfCausalModel)
+        hf_model = getattr(self.model, "model", self.model)
+        hf_gen_cfg = getattr(self.model, "generation_cfg", None)
+
         inputs = self.tokenizer(input_query, return_tensors="pt", add_special_tokens=False)
-        input_ids = inputs.input_ids.to(self.model.model.device)
-        attention_mask = inputs.attention_mask.to(self.model.model.device)
+        input_ids = inputs.input_ids.to(hf_model.device)
+        attention_mask = inputs.attention_mask.to(hf_model.device)
         input_len = input_ids.shape[1]
 
         allowed_tokens_fn = self._build_allowed_tokens_fn(
@@ -291,13 +295,16 @@ class V2Decoder:
         )
         default_gen_kwargs.update(gen_kwargs)
 
-        res = self.model.model.generate(
+        gen_kw = dict(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            generation_config=self.model.generation_cfg,
             prefix_allowed_tokens_fn=allowed_tokens_fn,
             **default_gen_kwargs,
         )
+        if hf_gen_cfg is not None:
+            gen_kw["generation_config"] = hf_gen_cfg
+
+        res = hf_model.generate(**gen_kw)
 
         return [
             self.tokenizer.decode(r[input_len:], skip_special_tokens=True)
